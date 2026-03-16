@@ -1,3 +1,6 @@
+// Package main is the entry point for the GridFS Data Extractor.
+// It handles command-line arguments, initializes configuration, and
+// manages concurrent download workers to extract files from MongoDB GridFS.
 package main
 
 import (
@@ -31,7 +34,8 @@ func main() {
 		return
 	}
 	if *configFile == "" || *blobList == "" || *blobPath == "" {
-		log.Fatalf("Usage: %s -config <config_file> -bloblist <list_of_blob_files> -blobpath <Stored_blob_path>", os.Args[0])
+		fmt.Fprintf(os.Stderr, "Usage: %s -config <config_file> -bloblist <list_of_blob_files> -blobpath <Stored_blob_path>\n", filepath.Clean(os.Args[0]))
+		os.Exit(1)
 	}
 
 	// Read configuration
@@ -46,11 +50,13 @@ func main() {
 		log.Fatalf("Failed to read file names: %v", err)
 	}
 
+	// Prepare environment for download
 	// Check destination blob path
 	if err := fileops.CreateDirectory(*blobPath); err != nil {
 		log.Fatalf("Error creating directory: %v", err)
 	}
 
+	// Initialize MongoDB connection
 	// Create a new client and connect to the server
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
@@ -65,15 +71,18 @@ func main() {
 		}
 	}()
 
+	// Orchestrate concurrent file downloads
 	// Concurrently download files
 	var wg sync.WaitGroup
 	jobs := make(chan string, len(fileNames))
 
+	// Launch worker pool
 	for i := 0; i < cfg.NumWorkers; i++ {
 		wg.Add(1)
 		go worker(&wg, jobs, client, *blobPath, cfg)
 	}
 
+	// Distribute download tasks
 	for _, fileName := range fileNames {
 		jobs <- fileName
 	}
@@ -84,6 +93,8 @@ func main() {
 	fmt.Println("All files downloaded.")
 }
 
+// worker processes download tasks from the jobs channel.
+// It checks for file existence before attempting a download to avoid redundant work.
 func worker(wg *sync.WaitGroup, jobs <-chan string, client *gridfs.Client, blobPath string, cfg *config.Config) {
 	defer wg.Done()
 	for fileName := range jobs {
@@ -95,7 +106,7 @@ func worker(wg *sync.WaitGroup, jobs <-chan string, client *gridfs.Client, blobP
 			continue
 		}
 
-		err := client.DownloadFile(fileName, blobPath, int64(cfg.LargeFileThresholdMB)*1024*1024)
+		err := client.DownloadFile(context.Background(), fileName, blobPath, int64(cfg.LargeFileThresholdMB)*1024*1024)
 		if err != nil {
 			log.Printf("Failed to download file %v: %v", fileName, err)
 		} else {

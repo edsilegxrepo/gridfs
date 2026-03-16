@@ -1,3 +1,5 @@
+// Package config provides structures and functions to manage application settings
+// loaded from .properties files using the Viper library.
 package config
 
 import (
@@ -5,6 +7,7 @@ import (
 )
 
 // Config holds the application configuration.
+// It maps .properties keys to Go struct fields using mapstructure tags.
 type Config struct {
 	MongoURI             string `mapstructure:"MONGO_URI"`
 	MongoUser            string `mapstructure:"MONGO_USER"`
@@ -16,11 +19,13 @@ type Config struct {
 }
 
 // LoadConfig reads configuration from a file and returns a Config struct.
+// It supports .properties format and sets defaults for performance tuning.
 func LoadConfig(path string) (*Config, error) {
 	viper.SetConfigFile(path)
 	viper.SetConfigType("properties")
 
 	// Set default values
+	viper.SetDefault("MONGO_GRIDFS_PREFIX", "fs")
 	viper.SetDefault("NUM_WORKERS", 10)
 	viper.SetDefault("LARGE_FILE_THRESHOLD_MB", 20)
 

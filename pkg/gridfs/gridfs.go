@@ -1,3 +1,5 @@
+// Package gridfs provides a simplified interface for interacting with MongoDB GridFS,
+// supporting both memory-efficient streaming for large files and in-memory reading for small ones.
 package gridfs
 
 import (
@@ -8,16 +10,15 @@ import (
 	"os"
 	"path/filepath"
 
-	"go.mongodb.org/mongo-driver/mongo"
-	"go.mongodb.org/mongo-driver/mongo/gridfs"
-	"go.mongodb.org/mongo-driver/mongo/options"
-	"go.mongodb.org/mongo-driver/mongo/readpref"
+	"go.mongodb.org/mongo-driver/v2/mongo"
+	"go.mongodb.org/mongo-driver/v2/mongo/options"
+	"go.mongodb.org/mongo-driver/v2/mongo/readpref"
 )
 
 // Client is a wrapper around the mongo client and bucket.
 type Client struct {
 	client *mongo.Client
-	bucket *gridfs.Bucket
+	bucket *mongo.GridFSBucket
 }
 
 // NewClient creates a new GridFS client.
@@ -27,7 +28,7 @@ func NewClient(ctx context.Context, cfg *config.Config) (*Client, error) {
 		Password: cfg.MongoPass,
 	})
 
-	client, err := mongo.Connect(ctx, clientOptions)
+	client, err := mongo.Connect(clientOptions)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to MongoDB: %w", err)
 	}
@@ -37,10 +38,7 @@ func NewClient(ctx context.Context, cfg *config.Config) (*Client, error) {
 	}
 
 	db := client.Database(cfg.MongoDB)
-	bucket, err := gridfs.NewBucket(db, options.GridFSBucket().SetName(cfg.MongoGridFSPrefix))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create GridFS bucket: %w", err)
-	}
+	bucket := db.GridFSBucket(options.GridFSBucket().SetName(cfg.MongoGridFSPrefix))
 
 	return &Client{
 		client: client,
@@ -49,8 +47,11 @@ func NewClient(ctx context.Context, cfg *config.Config) (*Client, error) {
 }
 
 // DownloadFile downloads a file from GridFS and saves it to the specified path.
-func (c *Client) DownloadFile(fileName, blobPath string, largeFileThreshold int64) (err error) {
-	downloadStream, err := c.bucket.OpenDownloadStreamByName(fileName)
+// It implements a threshold-based strategy:
+// - Files larger than largeFileThreshold are streamed directly to disk to save memory.
+// - Smaller files are read into memory first for performance.
+func (c *Client) DownloadFile(ctx context.Context, fileName, blobPath string, largeFileThreshold int64) (err error) {
+	downloadStream, err := c.bucket.OpenDownloadStreamByName(ctx, fileName)
 	if err != nil {
 		return fmt.Errorf("failed to open download stream for file %v: %w", fileName, err)
 	}
@@ -65,7 +66,7 @@ func (c *Client) DownloadFile(fileName, blobPath string, largeFileThreshold int6
 
 	if fileSize > largeFileThreshold {
 		// Stream large files
-		file, err := os.Create(filePath)
+		file, err := os.Create(filepath.Clean(filePath))
 		if err != nil {
 			return fmt.Errorf("failed to create file %v for streaming: %w", filePath, err)
 		}
@@ -85,7 +86,7 @@ func (c *Client) DownloadFile(fileName, blobPath string, largeFileThreshold int6
 			return fmt.Errorf("failed to read data from download stream: %w", err)
 		}
 
-		if err := os.WriteFile(filePath, data, 0644); err != nil {
+		if err := os.WriteFile(filepath.Clean(filePath), data, 0600); err != nil {
 			return fmt.Errorf("failed to write file %v to disk: %w", filePath, err)
 		}
 	}
