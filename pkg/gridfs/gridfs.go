@@ -4,7 +4,7 @@ package gridfs
 
 import (
 	"context"
-	"criticalsys/gridfs/pkg/config"
+	"criticalsys.net/gridfs/pkg/config"
 	"fmt"
 	"io"
 	"os"

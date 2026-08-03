@@ -5,9 +5,9 @@ package main
 
 import (
 	"context"
-	"criticalsys/gridfs/pkg/config"
-	"criticalsys/gridfs/pkg/fileops"
-	"criticalsys/gridfs/pkg/gridfs"
+	"criticalsys.net/gridfs/pkg/config"
+	"criticalsys.net/gridfs/pkg/fileops"
+	"criticalsys.net/gridfs/pkg/gridfs"
 	"flag"
 	"fmt"
 	"log"

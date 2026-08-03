@@ -1,4 +1,4 @@
-module criticalsys/gridfs
+module criticalsys.net/gridfs
 
 go 1.25.0
 
