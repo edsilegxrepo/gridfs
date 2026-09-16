@@ -46,5 +46,5 @@ func ReadFileNames(filename string) (names []string, err error) {
 
 // CreateDirectory creates a directory if it doesn't exist.
 func CreateDirectory(path string) error {
-	return os.MkdirAll(path, 0750)
+	return os.MkdirAll(path, 0o750)
 }

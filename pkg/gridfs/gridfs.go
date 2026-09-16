@@ -4,11 +4,12 @@ package gridfs
 
 import (
 	"context"
-	"criticalsys.net/gridfs/pkg/config"
 	"fmt"
 	"io"
 	"os"
 	"path/filepath"
+
+	"criticalsys.net/gridfs/pkg/config"
 
 	"go.mongodb.org/mongo-driver/v2/mongo"
 	"go.mongodb.org/mongo-driver/v2/mongo/options"
@@ -86,7 +87,7 @@ func (c *Client) DownloadFile(ctx context.Context, fileName, blobPath string, la
 			return fmt.Errorf("failed to read data from download stream: %w", err)
 		}
 
-		if err := os.WriteFile(filepath.Clean(filePath), data, 0600); err != nil {
+		if err := os.WriteFile(filepath.Clean(filePath), data, 0o600); err != nil {
 			return fmt.Errorf("failed to write file %v to disk: %w", filePath, err)
 		}
 	}

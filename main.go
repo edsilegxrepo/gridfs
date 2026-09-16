@@ -5,9 +5,6 @@ package main
 
 import (
 	"context"
-	"criticalsys.net/gridfs/pkg/config"
-	"criticalsys.net/gridfs/pkg/fileops"
-	"criticalsys.net/gridfs/pkg/gridfs"
 	"flag"
 	"fmt"
 	"log"
@@ -15,6 +12,10 @@ import (
 	"path/filepath"
 	"sync"
 	"time"
+
+	"criticalsys.net/gridfs/pkg/config"
+	"criticalsys.net/gridfs/pkg/fileops"
+	"criticalsys.net/gridfs/pkg/gridfs"
 )
 
 var version string
